@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:api-gateway="http://www.mulesoft.org/schema/mule/api-gateway"
+	xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core"
+    xmlns:secure-properties="http://www.mulesoft.org/schema/mule/secure-properties" xmlns:twilio-connector="http://www.mulesoft.org/schema/mule/twilio-connector"
+    xmlns:tls="http://www.mulesoft.org/schema/mule/tls"
+    xmlns:email="http://www.mulesoft.org/schema/mule/email"
+    xmlns:validation="http://www.mulesoft.org/schema/mule/validation" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit"
+    xmlns:http="http://www.mulesoft.org/schema/mule/http"
+    xmlns="http://www.mulesoft.org/schema/mule/core"
+    xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="
+http://www.mulesoft.org/schema/mule/tls http://www.mulesoft.org/schema/mule/tls/current/mule-tls.xsd 
+http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd 
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/validation http://www.mulesoft.org/schema/mule/validation/current/mule-validation.xsd
+http://www.mulesoft.org/schema/mule/email http://www.mulesoft.org/schema/mule/email/current/mule-email.xsd
+http://www.mulesoft.org/schema/mule/twilio-connector http://www.mulesoft.org/schema/mule/twilio-connector/current/mule-twilio-connector.xsd
+http://www.mulesoft.org/schema/mule/secure-properties http://www.mulesoft.org/schema/mule/secure-properties/current/mule-secure-properties.xsd
+http://www.mulesoft.org/schema/mule/api-gateway http://www.mulesoft.org/schema/mule/api-gateway/current/mule-api-gateway.xsd">
+
+	<global-property doc:name="Global Property" name="mule.env"
+        value="${mule.env}" />
+    <http:listener-config
+        name="httpListenerConfig">
+        <http:listener-connection host="0.0.0.0"
+            port="${api.http.port}" />
+    </http:listener-config>
+  
+
+  
+    <configuration-properties doc:name="Configuration properties"
+        doc:id="664993f2-524f-495a-b8e2-8de7c59d5a89" file="properties/${mule.env}-config.yaml" />
+	<secure-properties:config name="Secure_Properties_Config" doc:name="Secure Properties Config" doc:id="4c4d62c4-02ec-4a11-bd72-cfc62fedecf1" key="${mule.secretKey}" file="properties/${mule.env}-config.yaml">
+		<secure-properties:encrypt algorithm="Blowfish" />
+	</secure-properties:config>
+
+  <configuration doc:name="Configuration" doc:id="f0216fc1-bef8-4f50-9d67-c932e116d840" defaultErrorHandler-ref="GlobalErrorHandler" />
+
+<!-- 	<api-gateway:autodiscovery apiId="${api.autoId}" ignoreBasePath="true" doc:name="API Autodiscovery" doc:id="692bda56-797e-4c2d-9191-96dfa2c5bc70" flowRef="api-main" /> -->
+	<error-handler name="GlobalErrorHandler">
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "name": "API Name",
+  "code": "400",
+  "title": "Bad Request",
+  "correlationId": vars.'x-correlation-id',
+  "description": ""
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[400]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="LogError" doc:id="dd1cbbaa-ae07-4faf-82f9-b651e6b7ffc4" name="errorLogger"/>
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"name": "API Name",
+	"code": "404",
+	"title": "Resource not found",
+	"correlationId": vars.'x-correlation-id',
+	"description": ""
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[404]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="LogError" doc:id="a05ad612-6a96-485a-9c8e-2b9ae5c2e8ab" name="errorLogger" />
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "name": "API Name",
+  "code": "405",
+  "title": "Method not allowed",
+  "correlationId": vars.'x-correlation-id',
+  "description": "Method not allowed"
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[405]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="LogError" doc:id="e926525d-8970-478f-b50d-d5ab577df3df" name="errorLogger" />
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+  "name": "API Name",
+  "code": "406",
+  "title": "Not acceptable",
+  "correlationId": vars.'x-correlation-id',
+  "description": ""
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[406]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="LogError" doc:id="237e6929-f15d-4a8b-b063-2eddb6a32eae" name="errorLogger" />
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"name": "API Name",
+	"code": "415",
+	"title": "Unsupported media type",
+	"correlationId": vars.'x-correlation-id',
+	"description": ""
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[415]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="LogError" doc:id="b0a42535-f2a9-4a95-a118-c40b98b05f40" name="errorLogger" />
+            
+</on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"name": "API Name",
+	"code": "501",
+	"title": "Not Implemented",
+	"correlationId": vars.'x-correlation-id',
+	"description": ""
+}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus"><![CDATA[501]]></ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+			<flow-ref doc:name="LogError" doc:id="6f2fc9c9-7cf8-4bb0-b510-bc7e6e813aa5" name="errorLogger" />
+            
+</on-error-propagate>
+        </error-handler>
+	<sub-flow name="errorLogger" doc:id="59f4b89d-fa85-41c8-95e6-2f00ef2096e9" >
+		<logger level="ERROR" doc:name="ErrorLogger" doc:id="0dfa35ae-451b-4c02-8b45-cb020cbade24" message="#[output application/json
+---
+
+{
+	&quot;api&quot;: &quot;API Name&quot;,
+	&quot;code&quot;: vars.httpStatus,
+	&quot;title&quot;: &quot;Not Implemented&quot;,
+	&quot;correlationId&quot;: vars.'x-correlation-id',
+	&quot;description&quot;: payload.description,
+	&quot;errorType&quot;: error.errorType,
+	&quot;errorDescription&quot;: error.detailedDescription
+}]"/>
+	</sub-flow>
+  
+   
+
+</mule>

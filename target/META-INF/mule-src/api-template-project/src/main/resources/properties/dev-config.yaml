@@ -1,0 +1,5 @@
+api:
+ base: v1
+ autoId : "1223456"
+ http:
+  port: "8081"

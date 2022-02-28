@@ -1,0 +1,35 @@
+{
+  "configs": [
+    "implementation.xml",
+    "global.xml",
+    "api.xml"
+  ],
+  "secureProperties": [
+    "mule.secretKey"
+  ],
+  "redeploymentEnabled": true,
+  "name": "replaceOrgID:api-template-project:1.0.6",
+  "minMuleVersion": "4.3.0",
+  "requiredProduct": "MULE_EE",
+  "classLoaderModelLoaderDescriptor": {
+    "id": "mule",
+    "attributes": {
+      "exportedPackages": [],
+      "exportedResources": [
+        "api.xml",
+        "dwl/sample.dwl",
+        "global.xml",
+        "implementation.xml",
+        "log4j2.xml",
+        "properties/dev-config.yaml",
+        "properties/local-config.yaml",
+        "properties/prod-config.yaml",
+        "properties/uat-config.yaml"
+      ]
+    }
+  },
+  "bundleDescriptorLoader": {
+    "id": "mule",
+    "attributes": {}
+  }
+}
